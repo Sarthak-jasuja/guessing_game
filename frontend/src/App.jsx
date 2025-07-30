@@ -1,0 +1,43 @@
+import { useState } from 'react';
+
+export default function App() {
+  const [guess, setGuess] = useState('');
+  const [message, setMessage] = useState('');
+  const [gameOver, setGameOver] = useState(false);
+
+  const handleGuess = async () => {
+    const res = await fetch('/api/guess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guess: Number(guess) }),
+    });
+    const data = await res.json();
+    setMessage(data.message);
+    if (data.status === 'win') {
+      setGameOver(true);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-screen gap-4 bg-gray-100">
+      <h1 className="text-3xl font-bold">Guess the Number</h1>
+      {!gameOver && (
+        <>
+          <input
+            type="number"
+            value={guess}
+            onChange={(e) => setGuess(e.target.value)}
+            className="p-2 border rounded"
+          />
+          <button
+            onClick={handleGuess}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Submit Guess
+          </button>
+        </>
+      )}
+      {message && <p className="text-lg mt-4">{message}</p>}
+    </div>
+  );
+}
