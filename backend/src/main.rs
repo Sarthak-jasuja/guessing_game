@@ -2,12 +2,21 @@ use axum::{
     routing::post,
     Router,
     Json,
-    http::{Method, HeaderValue},
+    http::{Method},
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tower_http::cors::{CorsLayer, Any};
-use rand::Rng;  // ✅ Add this for random number
+use rand::Rng;
+use once_cell::sync::Lazy;  // ✅ For global state
+use std::sync::Mutex;
+
+// ✅ Global random number stored in Mutex
+static SECRET_NUMBER: Lazy<Mutex<u32>> = Lazy::new(|| {
+    let num = rand::thread_rng().gen_range(1..=100);
+    println!("Generated secret number: {}", num);
+    Mutex::new(num)
+});
 
 #[derive(Debug, Deserialize)]
 struct GuessRequest {
@@ -21,18 +30,22 @@ struct GuessResponse {
 }
 
 async fn guess_handler(Json(payload): Json<GuessRequest>) -> Json<GuessResponse> {
-    let secret_number = rand::thread_rng().gen_range(1..=100);  // ✅ Random number 1 to 100
-    let response = if payload.guess < secret_number {
+    let mut number = SECRET_NUMBER.lock().unwrap();  // 🔐 Access shared number
+    let response = if payload.guess < *number {
         GuessResponse {
             message: "Too small!".to_string(),
             status: "continue".to_string(),
         }
-    } else if payload.guess > secret_number {
+    } else if payload.guess > *number {
         GuessResponse {
             message: "Too big!".to_string(),
             status: "continue".to_string(),
         }
     } else {
+        let new_number = rand::thread_rng().gen_range(1..=100);
+        println!("New secret number: {}", new_number);
+        *number = new_number;  // 🎯 Reset after win
+
         GuessResponse {
             message: "You win!".to_string(),
             status: "win".to_string(),
