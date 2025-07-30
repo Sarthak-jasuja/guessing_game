@@ -1,8 +1,8 @@
-use std::env;
 use axum::{
     routing::post,
     Router,
     Json,
+    http::{Method, HeaderValue},
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -42,18 +42,20 @@ async fn guess_handler(Json(payload): Json<GuessRequest>) -> Json<GuessResponse>
 
 #[tokio::main]
 async fn main() {
-    // ✅ Get port from environment variable, fallback to 3000 for local
-    let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
-    let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
+    // ✅ Allow CORS from anywhere OR restrict to Vercel domain
+    let cors = CorsLayer::new()
+        .allow_origin(Any)  // For testing; later restrict
+        .allow_methods([Method::POST])
+        .allow_headers([axum::http::header::CONTENT_TYPE]);
 
-    println!("Listening on http://{}", addr);
+    let app = Router::new()
+        .route("/api/guess", post(guess_handler))
+        .layer(cors);
 
-    let app = Router::new().route("/api/guess", post(guess_handler));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    println!("Listening on {}", addr);
 
-    axum::serve(
-        tokio::net::TcpListener::bind(addr).await.unwrap(),
-        app,
-    )
-    .await
-    .unwrap();
+    axum::serve(tokio::net::TcpListener::bind(addr).await.unwrap(), app)
+        .await
+        .unwrap();
 }
