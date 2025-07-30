@@ -6,7 +6,7 @@ export default function App() {
   const [gameOver, setGameOver] = useState(false);
 
   const handleGuess = async () => {
-    const res = await fetch('/api/guess', {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/guess`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ guess: Number(guess) }),
