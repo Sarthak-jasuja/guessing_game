@@ -43,10 +43,13 @@ async fn main() {
     let app = Router::new().route("/api/guess", post(guess_handler));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    println!("Listening on {}", addr);
+    println!("Listening on http://{}", addr);
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    // ✅ No need to import hyper::Server directly
+    axum::serve(
+        tokio::net::TcpListener::bind(addr).await.unwrap(),
+        app,
+    )
+    .await
+    .unwrap();
 }
