@@ -7,6 +7,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tower_http::cors::{CorsLayer, Any};
+use rand::Rng;  // ✅ Add this for random number
 
 #[derive(Debug, Deserialize)]
 struct GuessRequest {
@@ -20,7 +21,7 @@ struct GuessResponse {
 }
 
 async fn guess_handler(Json(payload): Json<GuessRequest>) -> Json<GuessResponse> {
-    let secret_number = 42;
+    let secret_number = rand::thread_rng().gen_range(1..=100);  // ✅ Random number 1 to 100
     let response = if payload.guess < secret_number {
         GuessResponse {
             message: "Too small!".to_string(),
@@ -42,9 +43,8 @@ async fn guess_handler(Json(payload): Json<GuessRequest>) -> Json<GuessResponse>
 
 #[tokio::main]
 async fn main() {
-    // ✅ Allow CORS from anywhere OR restrict to Vercel domain
     let cors = CorsLayer::new()
-        .allow_origin(Any)  // For testing; later restrict
+        .allow_origin(Any)
         .allow_methods([Method::POST])
         .allow_headers([axum::http::header::CONTENT_TYPE]);
 
