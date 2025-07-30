@@ -1,3 +1,4 @@
+use std::env;
 use axum::{
     routing::post,
     Router,
@@ -40,12 +41,14 @@ async fn guess_handler(Json(payload): Json<GuessRequest>) -> Json<GuessResponse>
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/api/guess", post(guess_handler));
+    // ✅ Get port from environment variable, fallback to 3000 for local
+    let port = env::var("PORT").unwrap_or_else(|_| "3000".to_string());
+    let addr: SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     println!("Listening on http://{}", addr);
 
-    // ✅ No need to import hyper::Server directly
+    let app = Router::new().route("/api/guess", post(guess_handler));
+
     axum::serve(
         tokio::net::TcpListener::bind(addr).await.unwrap(),
         app,
