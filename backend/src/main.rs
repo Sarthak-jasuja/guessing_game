@@ -6,6 +6,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use tower_http::cors::{CorsLayer, Any};
 
 #[derive(Debug, Deserialize)]
 struct GuessRequest {
