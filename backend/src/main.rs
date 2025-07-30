@@ -2,15 +2,11 @@ use axum::{
     routing::post,
     Router,
     Json,
-    extract::State,
-    serve,
 };
-use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
-use tokio::net::TcpListener;
+use std::net::SocketAddr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct GuessRequest {
     guess: u32,
 }
@@ -21,34 +17,8 @@ struct GuessResponse {
     status: String,
 }
 
-#[derive(Clone)]
-struct AppState {
-    secret_number: Arc<Mutex<u32>>,
-}
-
-#[tokio::main]
-async fn main() {
-    let secret_number = rand::thread_rng().gen_range(1..=100);
-    println!("Secret number: {}", secret_number);
-
-    let app_state = AppState {
-        secret_number: Arc::new(Mutex::new(secret_number)),
-    };
-
-    let app = Router::new()
-        .route("/guess", post(guess_handler))
-        .with_state(app_state);
-
-    println!("Server running on http://0.0.0.0:3000");
-    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    serve(listener, app).await.unwrap();
-}
-
-async fn guess_handler(
-    State(state): State<AppState>,
-    Json(payload): Json<GuessRequest>,
-) -> Json<GuessResponse> {
-    let secret_number = *state.secret_number.lock().unwrap();
+async fn guess_handler(Json(payload): Json<GuessRequest>) -> Json<GuessResponse> {
+    let secret_number = 42;
     let response = if payload.guess < secret_number {
         GuessResponse {
             message: "Too small!".to_string(),
@@ -66,4 +36,17 @@ async fn guess_handler(
         }
     };
     Json(response)
+}
+
+#[tokio::main]
+async fn main() {
+    let app = Router::new().route("/api/guess", post(guess_handler));
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    println!("Listening on {}", addr);
+
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }
