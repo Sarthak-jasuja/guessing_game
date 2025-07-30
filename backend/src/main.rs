@@ -1,13 +1,14 @@
-use hyper::Server;
 use axum::{
     routing::post,
     Router,
     Json,
     extract::State,
+    serve,
 };
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use tokio::net::TcpListener;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct GuessRequest {
@@ -22,7 +23,7 @@ struct GuessResponse {
 
 #[derive(Clone)]
 struct AppState {
-    secret_number: Mutex<u32>,
+    secret_number: Arc<Mutex<u32>>,
 }
 
 #[tokio::main]
@@ -31,18 +32,16 @@ async fn main() {
     println!("Secret number: {}", secret_number);
 
     let app_state = AppState {
-        secret_number: Mutex::new(secret_number),
+        secret_number: Arc::new(Mutex::new(secret_number)),
     };
 
     let app = Router::new()
         .route("/guess", post(guess_handler))
         .with_state(app_state);
 
-    println!("Server running on http://localhost:3000");
-    Server::bind(&"0.0.0.0:3000".parse().unwrap())
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    println!("Server running on http://0.0.0.0:3000");
+    let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    serve(listener, app).await.unwrap();
 }
 
 async fn guess_handler(
